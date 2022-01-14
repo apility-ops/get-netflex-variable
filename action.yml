@@ -1,0 +1,46 @@
+name: 'Netflex Variable'
+description: 'Gets variable value from Netflex Foundation'
+inputs:
+  publicKey:  
+    description: 'Site public key'
+    required: true
+  privateKey:
+    description: 'Site private key'
+    required: true
+  alias:
+    description: Variable alias
+    required: true
+  apiUrl:
+    description: The api base url in (not including path)
+    required: true
+    default: "https://api.netflexapp.com"
+  mask:
+    description: Should the value be masked in the output?
+    default: 'yes'
+  
+outputs:
+  value:
+    description: "Variable value"
+    value: ${{ steps.query.outputs.value }}
+runs:
+  using: "composite"
+  steps:
+    - name: Query api
+      id: query
+      shell: bash
+      run: |
+        RESP=$(curl --fail -s --basic -u $PUB:$PRIV $BASE/v1/foundation/variables/$ALIAS)
+        [ "$RESP" ] || exit 1
+        VALUE=$(echo $RESP | jq -r .value)
+        if [ $MASK == 'yes' ]
+        then
+            echo '::add-mask::$VALUE'
+        fi
+        echo ::set-output name=value::$VALUE
+        [ "$RESP" ] || exit 1
+      env:
+        PUB: ${{ inputs.publicKey }}
+        PRIV: ${{ inputs.privateKey }}
+        BASE: ${{ inputs.apiUrl }}
+        ALIAS: ${{ inputs.alias }}
+        MASK: ${{ inputs.mask }}
